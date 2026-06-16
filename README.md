@@ -19,9 +19,20 @@ Whenever there is a diffference between IPU4 and IPU6, it is either handled with
 | IPU4P       | 0x8a19        | Ice Lake IPU4P, e.g. Surface Pro 7 |
 
 IPU4P support is currently an initial probe path only. The driver binds the
-PCI device, requests `ipu4p_cpd.bin`, and labels the media device as `ipu4p`,
-but the Surface camera graph, sensor routing, and capture path still need
-hardware validation and follow-up work.
+PCI device, requests `ipu4p_cpd.bin`, and labels the media device as `ipu4p`.
+On Surface Pro 7 the ACPI camera shape is:
+
+| ACPI node | HID | Sensor | I2C bus/address | Companion |
+|-----------|-----|--------|-----------------|-----------|
+| `CAMF` | `INT33BE` | OV5693 front camera | `I2C2`, `0x36` | `ICL1` / `INT3472:01` |
+| `CAMR` | `INT347A` | OV8865 rear camera | `I2C3`, `0x10` plus VCM at `0x0c` | `ICL0` / `INT3472:00` |
+| `CAM3` | `INT347E` | OV7251 IR/depth camera | `I2C3`, `0x60` | `ICL2` / `INT3472:02` |
+
+Those sensor HIDs are already supported by Linux's generic `ipu-bridge.c`, and
+without an IPU bridge provider the sensor drivers defer with `waiting for fwnode
+graph endpoint`. IPU4P therefore uses upstream `ipu_bridge_init()` with
+`ipu_bridge_parse_ssdb()` instead of the Ambu-specific bridge. Full Surface
+camera graph/capture still needs hardware validation and follow-up work.
 
 ## Tested kernel versions
 * 6.18.29
