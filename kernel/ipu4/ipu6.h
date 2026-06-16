@@ -319,6 +319,7 @@ struct ipu6_isys_csi2_pdata {
 
 struct ipu6_isys_internal_csi2_pdata {
 	u32 nports;
+	const unsigned int *offsets;
 	u32 irq_mask;
 	u32 ctrl0_irq_edge;
 	u32 ctrl0_irq_clear;

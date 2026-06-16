@@ -11,8 +11,18 @@
 #define IPU4_PLATFORM_ISYS_CSI2_REG_H
 
 static const unsigned int ipu4_csi_offsets[] = {
-	0x64000, 0x65000, 0x66000, 0x67000, 0x6C000, 0x6C800
+	0x64000, 0x65000, 0x66000, 0x67000, 0x6c000, 0x6c800
 };
+
+/*
+ * IPU4P exposes five usable receivers starting at hardware port 3:
+ * s0p3, s1p0, s1p1, s1p2 and s1p3.  Keep the offset table compact;
+ * fwnode hardware port numbers are translated to these indices by ISYS.
+ */
+static const unsigned int ipu4p_csi_offsets[] = {
+	0x64300, 0x6c000, 0x6c100, 0x6c200, 0x6c300
+};
+
 #define CSI_REG_PORT_BASE(id)		ipu4_csi_offsets[id]
 
 /* IRQ-related registers specific to each of the four CSI receivers */

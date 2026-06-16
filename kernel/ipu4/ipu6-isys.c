@@ -182,9 +182,11 @@ static int isys_csi2_register_subdevices(struct ipu6_isys *isys)
 		return -ENOMEM;
 
 	for (i = 0; i < csi2_pdata->nports; i++) {
+		u32 port_base = csi2_pdata->offsets ?
+				csi2_pdata->offsets[i] : CSI_REG_PORT_BASE(i);
+
 		ret = ipu6_isys_csi2_init(&isys->csi2[i], isys,
-					  isys->pdata->base +
-					  CSI_REG_PORT_BASE(i), i);
+					  isys->pdata->base + port_base, i);
 		if (ret)
 			goto fail;
 
@@ -869,6 +871,24 @@ static const struct v4l2_async_notifier_operations isys_async_ops = {
 };
 
 #define ISYS_MAX_PORTS 8
+#define IPU4P_CSI2_FIRST_HW_PORT 3
+
+static int isys_csi2_fwnode_port_to_index(struct ipu6_isys *isys,
+						  unsigned int port)
+{
+	if (is_ipu4p(isys->adev->isp->hw_ver)) {
+		if (port < IPU4P_CSI2_FIRST_HW_PORT)
+			return -EINVAL;
+
+		port -= IPU4P_CSI2_FIRST_HW_PORT;
+	}
+
+	if (port >= isys->pdata->ipdata->csi2.nports)
+		return -EINVAL;
+
+	return port;
+}
+
 static int isys_notifier_init(struct ipu6_isys *isys)
 {
 	struct ipu6_device *isp = isys->adev->isp;
@@ -904,11 +924,18 @@ static int isys_notifier_init(struct ipu6_isys *isys)
 			goto err_parse;
 		}
 
-		s_asd->csi2.port = vep.base.port;
+		ret = isys_csi2_fwnode_port_to_index(isys, vep.base.port);
+		if (ret < 0) {
+			dev_err(dev, "invalid fwnode csi2 port %u\n", vep.base.port);
+			goto err_parse;
+		}
+
+		s_asd->csi2.port = ret;
 		s_asd->csi2.nlanes = vep.bus.mipi_csi2.num_data_lanes;
 
-		dev_dbg(dev, "remote endpoint port %d with %d lanes added\n",
-			s_asd->csi2.port, s_asd->csi2.nlanes);
+		dev_dbg(dev,
+			"remote endpoint hw port %u mapped to csi2 %u with %u lanes\n",
+			vep.base.port, s_asd->csi2.port, s_asd->csi2.nlanes);
 
 		fwnode_handle_put(ep);
 

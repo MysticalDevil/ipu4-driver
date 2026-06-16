@@ -226,7 +226,7 @@ static struct ipu6_psys_internal_pdata psys_ipdata = {
 	},
 };
 #else
-static const struct ipu6_isys_internal_pdata isys_ipdata = {
+static struct ipu6_isys_internal_pdata isys_ipdata = {
 	.hw_variant = {
 	    .offset = IPU4_ISYS_OFFSET,
 		.nr_mmus = 2,
@@ -281,6 +281,7 @@ static const struct ipu6_isys_internal_pdata isys_ipdata = {
 	.isys_dma_overshoot = IPU6_ISYS_OVERALLOC_MIN,
 	.num_parallel_streams = IPU4_STREAM_ID_MAX,
 	.csi2.nports = ARRAY_SIZE(ipu4_csi_offsets),
+	.csi2.offsets = ipu4_csi_offsets,
 	.max_streams = IPU4_ISYS_MAX_STREAMS,
 	.max_sram_blocks = IPU4_ISYS_MAX_STREAMS,
 	.max_send_queues = IPU4_N_MAX_SEND_QUEUES,
@@ -958,7 +959,9 @@ static int ipu6_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		 */
 		isp->cpd_metadata_cmpnt_size =
 			sizeof(struct ipu6se_cpd_metadata_cmpnt);
-		isp->buttress.reg_irq_sts = BUTTRESS_REG_ISR_ENABLED_STATUS;
+		isys_ipdata.csi2.nports = ARRAY_SIZE(ipu4p_csi_offsets);
+		isys_ipdata.csi2.offsets = ipu4p_csi_offsets;
+		isp->buttress.reg_irq_sts = BUTTRESS_REG_ISR_STATUS;
 		break;
 	default:
 		return dev_err_probe(dev, -ENODEV,
