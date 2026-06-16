@@ -463,10 +463,10 @@ int ipu6_buttress_power(struct device *dev,
 		pwr_sts = ctrl->pwr_sts_off << ctrl->pwr_sts_shift;
 	} else {
 		val = BUTTRESS_FREQ_CTL_START |
-			FIELD_PREP(BUTTRESS_FREQ_CTL_RATIO_MASK,
-				   ctrl->ratio) |
+			(ctrl->ratio << ctrl->ratio_shift) |
 			FIELD_PREP(BUTTRESS_FREQ_CTL_QOS_FLOOR_MASK,
 				   ctrl->qos_floor) |
+			(ctrl->ovrd << ctrl->ovrd_shift) |
 			IPU4_BUTTRESS_FREQ_CTL_ICCMAX_LEVEL;
 
 		pwr_sts = ctrl->pwr_sts_on << ctrl->pwr_sts_shift;

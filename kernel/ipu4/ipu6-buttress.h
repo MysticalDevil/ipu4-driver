@@ -24,8 +24,11 @@ struct ipu6_bus_device;
 
 struct ipu6_buttress_ctrl {
 	u32 freq_ctl, pwr_sts_shift, pwr_sts_mask, pwr_sts_on, pwr_sts_off;
+	u32 ratio_shift;
+	u32 ovrd_shift;
 	unsigned int ratio;
 	unsigned int qos_floor;
+	unsigned int ovrd;
 };
 
 struct ipu6_buttress_ipc {

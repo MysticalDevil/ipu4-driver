@@ -431,6 +431,60 @@ const struct ipu6_buttress_ctrl ipu4_psys_buttress_ctrl = {
 	.pwr_sts_off = IPU4_BUTTRESS_PWR_STATE_PS_PWR_FSM_IDLE,
 };
 
+static const struct ipu6_buttress_ctrl ipu4p_isys_buttress_ctrl = {
+	.ratio = IPU4_IS_FREQ_CTL_DIVISOR,
+	.ratio_shift = IPU4P_BUTTRESS_REG_IS_FREQ_CTL_RATIO_SHIFT,
+	.qos_floor = 0,
+	.freq_ctl = IPU6_BUTTRESS_REG_IS_FREQ_CTL,
+	.pwr_sts_shift = IPU4P_BUTTRESS_PWR_STATE_IS_PWR_FSM_SHIFT,
+	.pwr_sts_mask = IPU4P_BUTTRESS_PWR_STATE_IS_PWR_FSM_MASK,
+	.pwr_sts_on = IPU4P_BUTTRESS_PWR_STATE_IS_PWR_FSM_IS_RDY,
+	.pwr_sts_off = IPU4P_BUTTRESS_PWR_STATE_IS_PWR_FSM_IDLE,
+};
+
+static const struct ipu6_buttress_ctrl ipu4p_psys_buttress_ctrl = {
+	.ratio = IPU4_PS_FREQ_CTL_DEFAULT_RATIO,
+	.ratio_shift = IPU4P_BUTTRESS_REG_PS_FREQ_CTL_RATIO_SHIFT,
+	.qos_floor = IPU4_PS_FREQ_CTL_DEFAULT_RATIO,
+	.ovrd = 1,
+	.ovrd_shift = IPU4P_BUTTRESS_REG_PS_FREQ_CTL_OVRD_SHIFT,
+	.freq_ctl = IPU6_BUTTRESS_REG_PS_FREQ_CTL,
+	.pwr_sts_shift = IPU4P_BUTTRESS_PWR_STATE_PS_PWR_FSM_SHIFT,
+	.pwr_sts_mask = IPU4P_BUTTRESS_PWR_STATE_PS_PWR_FSM_MASK,
+	.pwr_sts_on = IPU4P_BUTTRESS_PWR_STATE_PS_PWR_FSM_PS_PWR_UP,
+	.pwr_sts_off = IPU4P_BUTTRESS_PWR_STATE_PS_PWR_FSM_IDLE,
+};
+
+struct ipu6_buttress_ctrls {
+	const struct ipu6_buttress_ctrl *isys;
+	const struct ipu6_buttress_ctrl *psys;
+};
+
+static const struct ipu6_buttress_ctrls ipu6_buttress_ctrls = {
+	.isys = &ipu6_isys_buttress_ctrl,
+	.psys = &ipu6_psys_buttress_ctrl,
+};
+
+static const struct ipu6_buttress_ctrls ipu4_buttress_ctrls = {
+	.isys = &ipu4_isys_buttress_ctrl,
+	.psys = &ipu4_psys_buttress_ctrl,
+};
+
+static const struct ipu6_buttress_ctrls ipu4p_buttress_ctrls = {
+	.isys = &ipu4p_isys_buttress_ctrl,
+	.psys = &ipu4p_psys_buttress_ctrl,
+};
+
+static const struct ipu6_buttress_ctrls *ipu6_buttress_ctrls_for_hw(u8 hw_ver)
+{
+	if (is_ipu4p(hw_ver))
+		return &ipu4p_buttress_ctrls;
+	if (is_ipu4(hw_ver))
+		return &ipu4_buttress_ctrls;
+
+	return &ipu6_buttress_ctrls;
+}
+
 static void
 ipu6_pkg_dir_configure_spc(struct ipu6_device *isp,
 			   const struct ipu6_hw_variants *hw_variant,
@@ -811,7 +865,7 @@ static void ipu6_configure_vc_mechanism(struct ipu6_device *isp)
 
 static int ipu6_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 {
-	const struct ipu6_buttress_ctrl *isys_ctrl = NULL, *psys_ctrl = NULL;
+	const struct ipu6_buttress_ctrls *buttress_ctrls;
 	struct device *dev = &pdev->dev;
 	void __iomem *isys_base = NULL;
 	void __iomem *psys_base = NULL;
@@ -932,20 +986,16 @@ static int ipu6_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 		goto out_ipu6_bus_del_devices;
 	}
 
-	isys_ctrl = is_ipu4(isp->hw_ver) ?
-			&ipu4_isys_buttress_ctrl : &ipu6_isys_buttress_ctrl;
-	isp->isys = ipu6_isys_init(pdev, &pdev->dev, isys_ctrl, isys_base,
-				   &isys_ipdata);
+	buttress_ctrls = ipu6_buttress_ctrls_for_hw(isp->hw_ver);
+	isp->isys = ipu6_isys_init(pdev, &pdev->dev, buttress_ctrls->isys,
+				   isys_base, &isys_ipdata);
 	if (IS_ERR(isp->isys)) {
 		ret = PTR_ERR(isp->isys);
 		goto out_ipu6_bus_del_devices;
 	}
 
-	psys_ctrl = is_ipu4(isp->hw_ver) ?
-			&ipu4_psys_buttress_ctrl : &ipu6_psys_buttress_ctrl;
-
-	isp->psys = ipu6_psys_init(pdev, &isp->isys->auxdev.dev, psys_ctrl,
-				   psys_base, &psys_ipdata);
+	isp->psys = ipu6_psys_init(pdev, &isp->isys->auxdev.dev,
+				   buttress_ctrls->psys, psys_base, &psys_ipdata);
 	if (IS_ERR(isp->psys)) {
 		ret = PTR_ERR(isp->psys);
 		goto out_ipu_bridge_uninit;
