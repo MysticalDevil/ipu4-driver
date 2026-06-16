@@ -102,6 +102,14 @@ enum ltr_did_type {
 
 static int isys_isr_one(struct ipu6_bus_device *adev);
 
+#ifndef IPU6
+static u32 ipu4_isys_unispart_irq_sw(struct ipu6_isys *isys)
+{
+	return is_ipu4p(isys->adev->isp->hw_ver) ?
+	       IPU4P_ISYS_UNISPART_IRQ_SW : IPU4_ISYS_UNISPART_IRQ_SW;
+}
+#endif
+
 static int
 isys_complete_ext_device_registration(struct ipu6_isys *isys,
 				      struct v4l2_subdev *sd,
@@ -312,7 +320,7 @@ void isys_setup_hw(struct ipu6_isys *isys)
 	    IPU4_ISYS_UNISPART_IRQ_CSI2(3) |
 	    IPU4_ISYS_UNISPART_IRQ_CSI2(4) | IPU4_ISYS_UNISPART_IRQ_CSI2(5);
 
-	irqs |= IPU4_ISYS_UNISPART_IRQ_SW;
+	irqs |= ipu4_isys_unispart_irq_sw(isys);
 
 	writel(irqs, base + IPU4_REG_ISYS_UNISPART_IRQ_EDGE);
 	writel(irqs, base + IPU4_REG_ISYS_UNISPART_IRQ_LEVEL_NOT_PULSE);
@@ -414,14 +422,14 @@ static irqreturn_t ipu4_isys_isr(struct ipu6_bus_device *adev)
 		 * interrupts, always assumed to arrive before FW SOF
 		 * events.
 		 */
-		if (status & IPU4_ISYS_UNISPART_IRQ_SW && !isys_isr_one(adev))
-			status = IPU4_ISYS_UNISPART_IRQ_SW;
+		if (status & ipu4_isys_unispart_irq_sw(isys) && !isys_isr_one(adev))
+			status = ipu4_isys_unispart_irq_sw(isys);
 		else
 			status = 0;
 
 		status |= readl(isys->pdata->base +
 				    IPU4_REG_ISYS_UNISPART_IRQ_STATUS);
-	} while (status & (isys->isr_csi2_bits | IPU4_ISYS_UNISPART_IRQ_SW));
+	} while (status & (isys->isr_csi2_bits | ipu4_isys_unispart_irq_sw(isys)));
 
 	spin_unlock(&isys->power_lock);
 

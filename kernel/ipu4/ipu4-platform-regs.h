@@ -54,7 +54,8 @@
 #define IPU4_REG_ISYS_UNISPART_IRQ_LEVEL_NOT_PULSE 0x7c014
 #define IPU4_REG_ISYS_UNISPART_SW_IRQ_REG          0x7c414
 #define IPU4_REG_ISYS_UNISPART_SW_IRQ_MUX_REG      0x7c418
-#define IPU4_ISYS_UNISPART_IRQ_SW			       BIT(30)
+#define IPU4_ISYS_UNISPART_IRQ_SW		       BIT(30)
+#define IPU4P_ISYS_UNISPART_IRQ_SW		       BIT(22)
 
 /* CDC Burst collector thresholds for isys - 3 FIFOs i = 0..2 */
 #define IPU4_REG_ISYS_CDC_THRESHOLD(i)		(0x7c400 + ((i) * 4))

@@ -240,8 +240,6 @@ struct ipu6_fw_com_context *ipu6_fw_com_prepare(struct ipu6_fw_com_cfg *cfg,
 		memcpy(specific_host_addr, cfg->specific_addr,
 		       cfg->specific_size);
 
-	ipu6_dma_sync_single(adev, ctx->config_vied_addr, sizeall);
-
 	/* initialize input queues */
 	offset += specific_size;
 	res.reg = SYSCOM_QPR_BASE_REG;
@@ -261,6 +259,9 @@ struct ipu6_fw_com_context *ipu6_fw_com_prepare(struct ipu6_fw_com_cfg *cfg,
 				    cfg->output[i].queue_size,
 				    cfg->output[i].token_size, &res);
 	}
+
+	/* Make the complete syscom configuration visible to firmware. */
+	ipu6_dma_sync_single(adev, ctx->config_vied_addr, sizeall);
 
 	return ctx;
 }
@@ -360,8 +361,12 @@ void ipu6_send_put_token(struct ipu6_fw_com_context *ctx, int q_nbr)
 {
 	struct ipu6_fw_sys_queue *q = &ctx->input_queue[q_nbr];
 	void __iomem *q_dmem = ctx->dmem_addr + q->wr_reg * 4;
-	unsigned int wr = readl(q_dmem + FW_COM_WR_REG) + 1;
+	unsigned int wr = readl(q_dmem + FW_COM_WR_REG);
 
+	ipu6_dma_sync_single(ctx->adev, q->vied_address + wr * q->token_size,
+			     q->token_size);
+
+	wr++;
 	if (wr >= q->size)
 		wr = 0;
 
@@ -388,6 +393,9 @@ void *ipu6_recv_get_token(struct ipu6_fw_com_context *ctx, int q_nbr)
 	packets = wr - rd;
 	if (!packets)
 		return NULL;
+
+	ipu6_dma_sync_single(ctx->adev, q->vied_address + rd * q->token_size,
+			     q->token_size);
 
 	return (void *)((uintptr_t)q->host_address + rd * q->token_size);
 }
