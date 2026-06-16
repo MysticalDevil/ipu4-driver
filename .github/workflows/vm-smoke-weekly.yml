@@ -7,11 +7,11 @@ on:
     - cron: "0 7 * * 0"
   workflow_dispatch:
 
-# Weekly vm-smoke for kernels not on the per-PR canary track. The 6.12
-# leg runs on every PR via vm-smoke.yml; every other track in
-# .github/kernel-pins/ (today: 6.18 + 7.0) runs here. The `pins`
+# Weekly vm-smoke for kernels not on the per-PR canary track. The 6.18
+# leg runs on every PR via vm-smoke.yml; every other supported track in
+# .github/kernel-pins/ (today: 7.0) runs here. The `pins`
 # setup job globs that directory and emits a matrix-shaped output
-# covering all non-6.12 tracks; vm-smoke then fans across with
+# covering all non-6.18 tracks; vm-smoke then fans across with
 # fail-fast: false so one bad kernel doesn't mask the other.
 
 jobs:
@@ -33,7 +33,7 @@ jobs:
           INCLUDE=$(
             for f in .github/kernel-pins/*.json; do
               key="$(basename "$f" .json)"
-              [[ "$key" == "6.12" ]] && continue
+              [[ "$key" == "6.18" ]] && continue
               jq --arg name "$key" \
                  '{name: $name, ref: .ref, url: .url}' "$f"
             done | jq -sc 'sort_by(.name)'

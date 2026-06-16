@@ -12,13 +12,13 @@ on:
         required: true
         type: string
       display-name:
-        description: Short human label used in step output (e.g. "6.12", "6.18").
+        description: Short human label used in step output (e.g. "6.18", "7.0").
         required: true
         type: string
       cache-linux:
         description: >-
           Restore the tools/linux build cache. Set false when linux-ref is a
-          moving branch (e.g. linux-6.12.y) so the rebase leg builds against
+          moving branch (e.g. linux-6.18.y) so the rebase leg builds against
           the actual branch tip instead of a previously-cached point release.
         required: false
         type: boolean
@@ -74,7 +74,7 @@ jobs:
             qemu-
 
       # The Linux cache is namespaced by display-name AND linux-ref so
-      # the 6.12 PR caller and the 6.18 weekly caller don't trample each
+      # the 6.18 PR caller and weekly callers do not trample each
       # other, and so a pin bump (e.g. v6.18 → v6.18.3) busts the cache.
       # bootstrap.sh's clone_if_missing returns early on an existing
       # tools/linux/ regardless of the requested tag, so a cache restore

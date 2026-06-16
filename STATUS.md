@@ -1,7 +1,7 @@
 # IPU4 dev/test harness — status
 
 This file tracks the state of the QEMU-based dev/test environment for the
-IPU4 driver: an in-tree fork of Linux at `v6.12` plus a fork of QEMU at
+IPU4 driver: an in-tree fork of Linux at `v6.18.29` plus a fork of QEMU at
 `v9.1.0` carrying our `hw/misc/ipu4.c` device model, joined by a tiered
 test stack that runs entirely in software (no real silicon required).
 
@@ -61,8 +61,8 @@ tools/
   workflows/
     build-and-kunit.yml      reusable: apt setup + bootstrap + build + kunit
     vm-smoke-reusable.yml    reusable: full VM (probe-smoke + streamon-smoke + mmiotrace + compare-mmio)
-    ci.yml                   PR/push gate: 6.12 + 6.18 matrix into build-and-kunit.yml
-    vm-smoke.yml             PR/push thin caller: 6.12 leg into vm-smoke-reusable.yml
+    ci.yml                   PR/push gate: 6.18 matrix into build-and-kunit.yml
+    vm-smoke.yml             PR/push thin caller: 6.18 leg into vm-smoke-reusable.yml
     vm-smoke-weekly.yml      Sunday cron: 6.18 leg into vm-smoke-reusable.yml
     bump-kernel-pins.yml     weekly Monday cron: open auto-PR rewriting bump-pin lines
     upstream-watch.yml       daily IPU6-cherry-pick triage cron
@@ -72,13 +72,13 @@ data/trace.txt           silicon's mmiotrace capture; baseline for compare-mmio
 ## Milestone state
 
 - **M0 — in-tree migration:** done. `tools/bootstrap.sh` clones Linux
-  at `v6.12`, copies an in-tree `Makefile` and `Kconfig` to
+  at `v6.18.29`, copies an in-tree `Makefile` and `Kconfig` to
   `drivers/media/pci/intel/ipu4/`, seeds the driver sources from
   `kernel/ipu4/`, and idempotently appends a `source` line to
   `drivers/media/pci/intel/Kconfig` and an `obj-$(CONFIG_VIDEO_INTEL_IPU4)
   += ipu4/` line to the parent `Makefile`. The driver builds via
   `make M=drivers/media/pci/intel/ipu4`. `ipu4-compat.h` is kept in
-  place: on v6.12 its only active macro is unused, but removing it
+  place: on v6.18.29 its only active macro is unused, but removing it
   would require editing four `#include` sites, deferred to a later
   upstreaming pass. The `kernel/ipu4/` tree remains the source of
   truth in this repo until M2 is green.
@@ -87,7 +87,7 @@ data/trace.txt           silicon's mmiotrace capture; baseline for compare-mmio
   `ipu4_bayer_kunit.c` build and run as KUnit modules under
   `qemu-system-x86_64` via the kernel's `tools/testing/kunit/kunit.py`.
   The `ipu4_mmu_kunit.c` suite was retired when upstream's MMU
-  map/unmap optimisation (Linux v6.12-era backport) inlined
+  map/unmap optimisation (Linux v6.18.29-era backport) inlined
   `ipu6_mmu_pgsize()` into the lower `l2_*` helpers, removing the
   symbol the test was wired to. `ipu4_ring_kunit.c` and
   `ipu4_queue_kunit.c` are still skipped because those call paths go
@@ -339,7 +339,7 @@ data/trace.txt           silicon's mmiotrace capture; baseline for compare-mmio
   non-zero `output_pins[i].addr` and posts `FRAME_SOF` +
   `PIN_DATA_READY`, and the driver's `ipu6_isys_queue_buf_ready()`
   matches by IOVA and completes the vb2 buffer. `streamon-smoke.sh`
-  reaches `STREAM:pattern_ok` on both the 6.12 and 6.18 legs;
+  reaches `STREAM:pattern_ok` on both the 6.18 and 6.18 legs;
   `vm-smoke.yml` publishes the lcov HTML at 33.1% lines / 40.7%
   functions of the IPU4 driver per run.
 
@@ -359,9 +359,9 @@ data/trace.txt           silicon's mmiotrace capture; baseline for compare-mmio
     so the driver's async-completion paths aren't exercised yet.
 
 - **M7 — 6.18 leg:** done. Build + KUnit run on `v6.18.3` alongside
-  `v6.12` on every PR via `.github/workflows/ci.yml`'s two-leg matrix
+  `v6.18.29` on every PR via `.github/workflows/ci.yml`'s two-leg matrix
   (PR #50). `vm-smoke-weekly.yml` runs the full VM tier against the
-  same 6.18 pin every Sunday (PR #59 split vm-smoke into a 6.12-on-PR
+  same 6.18 pin every Sunday (PR #59 split vm-smoke into a 6.18-on-PR
   thin caller plus a 6.18-weekly thin caller). Both legs reach
   `STREAM:pattern_ok`. Driver-side fix needed: `ipu4-compat.h` had to
   be included in `kernel/ipu4/virt-sensor.c` and the format kunit
@@ -387,7 +387,7 @@ prerequisites"). They match the canonical set in
 `.github/actions/setup-harness/action.yml`.
 
 ```bash
-tools/bootstrap.sh            # one-time: clones Linux@v6.12 + QEMU@v9.1.0, seeds patches + driver
+tools/bootstrap.sh            # one-time: clones Linux@v6.18.29 + QEMU@v9.1.0, seeds patches + driver
 tools/build.sh                # build intel-ipu4{,-isys}.ko + ambu-ipu-bridge.ko (fast)
 tools/tests/kunit.sh          # Tier 1: ipu4_format + ipu4_bayer KUnit suites (~1 s)
 tools/build-qemu.sh           # build qemu-system-x86_64 with the ipu4 device
@@ -414,6 +414,6 @@ for all environment hooks.
   `hw/misc/ipu4.c` is labeled `guess` in the notes. The M3 loop is the
   plan for upgrading those guesses.
 - `kernel/ipu4/` is not deleted yet. That happens after the first
-  green e2e run on 6.12, so a revert of the in-tree layout remains
+  green e2e run on 6.18, so a revert of the in-tree layout remains
   trivial until then.
 - `ipu4-compat.h` is kept rather than removed by `bootstrap.sh`.

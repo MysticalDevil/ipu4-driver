@@ -82,7 +82,7 @@ jobs:
             echo "VM_SMOKE_RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
             mkdir -p tools/coverage tools/tests/out
             # vm-smoke-reusable.yml namespaces uploads with the caller's
-            # display-name (e.g. coverage-html-6.12-<run_id>), so look up
+            # display-name (e.g. coverage-html-6.18-<run_id>), so look up
             # the actual artifact names instead of guessing the suffix.
             ARTIFACTS_JSON="$(gh api \
                 "repos/$REPO_FULL/actions/runs/$RUN_ID/artifacts?per_page=100")"
@@ -131,16 +131,16 @@ jobs:
           fi
 
       # Read-only restore of whatever tools/linux/ the most recent
-      # 6.12 vm-smoke run built. Saves the ~30s shallow clone on warm
+      # 6.18 vm-smoke run built. Saves the ~30s shallow clone on warm
       # days; on a cache miss the next step's `git clone` still
       # populates the tree from scratch.
-      - name: Restore tools/linux cache from vm-smoke (6.12)
+      - name: Restore tools/linux cache from vm-smoke (6.18)
         uses: actions/cache/restore@v4
         with:
           path: tools/linux
           key: pages-linux-restore-noop
           restore-keys: |
-            linux-6.12-
+            linux-6.18-
 
       - name: Regenerate upstream-diff summary
         run: |
@@ -150,7 +150,7 @@ jobs:
           # running the full bootstrap (which also clones QEMU).
           # Failure is non-fatal: the dashboard renders without the
           # upstream-diff section if this step is skipped.
-          LINUX_TAG="${IPU4_LINUX_TAG:-v6.12}"
+          LINUX_TAG="${IPU4_LINUX_TAG:-v6.18.29}"
           LINUX_URL="${IPU4_LINUX_URL:-https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git}"
           if [[ ! -d tools/linux/.git ]]; then
             git clone --depth 1 --branch "$LINUX_TAG" "$LINUX_URL" tools/linux \

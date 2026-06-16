@@ -6,7 +6,7 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
-# Per-PR canary: 6.12 by default. Other tracks (6.18, 7.0) run
+# Per-PR canary: 6.18 by default. Other supported tracks (7.0+) run
 # weekly via vm-smoke-weekly.yml. Each track's pin lives in its own
 # file under .github/kernel-pins/ so parallel bumper PRs don't
 # conflict on each other.
@@ -15,12 +15,12 @@ on:
 # `bot/bump-kernel-pins-<key>` branch (opened by
 # bump-kernel-pins.yml, one PR per track), route vm-smoke to the
 # bumped track so the check actually exercises the kernel ref the PR
-# is changing — instead of rerunning 6.12, which is unchanged on
-# anything-but-a-6.12 bump and thus zero signal.
+# is changing — instead of rerunning 6.18, which is unchanged on
+# anything-but-a-6.18 bump and thus zero signal.
 #
 # Hand-edits to .github/kernel-pins/ on a non-bot branch keep the
-# 6.12 leg; trigger vm-smoke-weekly.yml via workflow_dispatch to
-# validate a hand-bumped non-6.12 track before merging.
+# 6.18 leg; trigger vm-smoke-weekly.yml via workflow_dispatch to
+# validate a hand-bumped non-6.18 track before merging.
 
 jobs:
   pins:
@@ -45,8 +45,8 @@ jobs:
           # Default per-PR canary track. github.head_ref is the
           # source branch on pull_request events and empty on
           # push / workflow_dispatch — so non-PR runs fall through
-          # to 6.12.
-          KEY="6.12"
+          # to 6.18.
+          KEY="6.18"
           case "$HEAD_REF" in
             bot/bump-kernel-pins-*) KEY="${HEAD_REF#bot/bump-kernel-pins-}" ;;
           esac

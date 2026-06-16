@@ -8,9 +8,9 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 
-LINUX_URL="${IPU4_LINUX_URL:-https://github.com/torvalds/linux.git}"
-LINUX_TAG="${IPU4_LINUX_TAG:-v6.12}"
-LINUX_BRANCH="${IPU4_LINUX_BRANCH:-ipu4-6.12}"
+LINUX_URL="${IPU4_LINUX_URL:-https://github.com/gregkh/linux.git}"
+LINUX_TAG="${IPU4_LINUX_TAG:-v6.18.29}"
+LINUX_BRANCH="${IPU4_LINUX_BRANCH:-ipu4-6.18}"
 
 QEMU_URL="${IPU4_QEMU_URL:-https://github.com/qemu/qemu.git}"
 QEMU_TAG="${IPU4_QEMU_TAG:-v9.1.0}"
@@ -55,10 +55,9 @@ apply_patch_tree "$ROOT/tools/qemu-patches"  "$QEMU_DIR"
 # Source files are not stored under linux-patches/ to avoid confusing diffs
 # against upstream IPU6; they are synced here with a rename pass.
 #
-# ipu4-compat.h is kept intact: on v6.12 its live branch is a single
-# macro definition (v4l2_subdev_get_pad_format) that is not referenced
-# by any .c file, so it is a no-op. Cleaning it up is tracked as part
-# of a later upstreaming pass.
+# ipu4-compat.h intentionally targets Linux 6.18 LTS / 6.18+ and 7.x.
+# Older compatibility shims are removed so the seeded tree matches the
+# supported kernel baseline.
 DRV_DST="$LINUX_DIR/drivers/media/pci/intel/ipu4"
 mkdir -p "$DRV_DST"
 echo ">>> seeding driver sources into $DRV_DST"

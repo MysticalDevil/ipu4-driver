@@ -820,6 +820,16 @@ static int ipu6_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 			sizeof(struct ipu6se_cpd_metadata_cmpnt);
 		isp->buttress.reg_irq_sts = BUTTRESS_REG_ISR_ENABLED_STATUS;
 		break;
+	case PCI_DEVICE_ID_INTEL_IPU4P:
+		isp->hw_ver = IPU4_VER_4P;
+		isp->cpd_fw_name = IPU4P_FIRMWARE_NAME;
+		// Surface Pro 7 / Ice Lake IPU4P uses the signed IPU4P CPD blob.
+		// Keep the IPU4 CPD metadata layout until IPU4P-specific parsing
+		// differences are identified from traces or Intel legacy driver.
+		isp->cpd_metadata_cmpnt_size =
+			sizeof(struct ipu6se_cpd_metadata_cmpnt);
+		isp->buttress.reg_irq_sts = BUTTRESS_REG_ISR_ENABLED_STATUS;
+		break;
 	default:
 		return dev_err_probe(dev, -ENODEV,
 				     "Unsupported IPU6 device %x\n",
@@ -1094,10 +1104,13 @@ static const struct dev_pm_ops ipu6_pm_ops = {
 };
 
 static const struct pci_device_id ipu6_pci_tbl[] = {
-	{ PCI_VDEVICE(INTEL, PCI_DEVICE_ID_INTEL_IPU4)},
+	{ PCI_VDEVICE(INTEL, PCI_DEVICE_ID_INTEL_IPU4) },
+	{ PCI_VDEVICE(INTEL, PCI_DEVICE_ID_INTEL_IPU4P) },
 	{ }
 };
 MODULE_DEVICE_TABLE(pci, ipu6_pci_tbl);
+MODULE_FIRMWARE(IPU4_FIRMWARE_NAME);
+MODULE_FIRMWARE(IPU4P_FIRMWARE_NAME);
 
 static const struct pci_error_handlers pci_err_handlers = {
 	.reset_prepare = ipu6_pci_reset_prepare,

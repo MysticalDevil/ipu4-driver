@@ -29,10 +29,10 @@ echo "# Upstream sync — $today"
 echo
 echo "Picked up since previous run:"
 if [[ -n "${STABLE_OLD:-}" || -n "${STABLE_NEW:-}" ]]; then
-	echo "- \`linux-6.12.y\`: \`${STABLE_OLD:-?}..${STABLE_NEW:-?}\`"
+	echo "- \`linux-6.18.y\`: \`${STABLE_OLD:-?}..${STABLE_NEW:-?}\`"
 fi
 if [[ -n "${MASTER_OLD:-}" || -n "${MASTER_NEW:-}" ]]; then
-	echo "- \`master\`: \`${MASTER_OLD:-?}..${MASTER_NEW:-?}\` (deduped against 6.12.y by patch-id)"
+	echo "- \`master\`: \`${MASTER_OLD:-?}..${MASTER_NEW:-?}\` (deduped against 6.18.y by patch-id)"
 fi
 echo
 

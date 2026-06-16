@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Daily upstream IPU6 commit watcher. Detects new commits on linux-6.12.y and
+# Daily upstream IPU6 commit watcher. Detects new commits on linux-6.18.y and
 # Linus master that touch drivers/media/pci/intel/ipu6/, attempts to apply
 # each to kernel/ipu4/ via git am, and (in normal mode) opens a single PR
 # with the clean cherry-picks stacked. Conflicts and N/A commits are
@@ -40,21 +40,21 @@ ensure_linux_clone "$ROOT"
 deepen_linux_clone "$ROOT"
 LINUX_DIR="$ROOT/tools/linux"
 
-# Stable mirror carries the moving linux-6.12.y branch; bootstrap's default
+# Stable mirror carries the moving linux-6.18.y branch; bootstrap's default
 # upstream URL (torvalds) only has master. Add a 'stable' remote idempotently.
 if ! git -C "$LINUX_DIR" remote get-url stable >/dev/null 2>&1; then
 	git -C "$LINUX_DIR" remote add stable \
 		https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
 fi
-echo ">>> fetching origin/master and stable/linux-6.12.y"
+echo ">>> fetching origin/master and stable/linux-6.18.y"
 # `bootstrap.sh` clones origin with a tag-only refspec
-# (`+refs/tags/v6.12:refs/tags/v6.12`), so a plain `git fetch origin master`
+# (`+refs/tags/v6.18.29:refs/tags/v6.18.29`), so a plain `git fetch origin master`
 # lands in FETCH_HEAD only — `refs/remotes/origin/master` is never created
 # and the rev-parse below fails with "unknown revision". Spell the
 # destination explicitly. The stable remote was added with the default
 # refspec, so its plain fetch is fine.
 git -C "$LINUX_DIR" fetch origin master:refs/remotes/origin/master --quiet
-git -C "$LINUX_DIR" fetch stable linux-6.12.y --quiet
+git -C "$LINUX_DIR" fetch stable linux-6.18.y --quiet
 
 # --- read state ---------------------------------------------------------------
 
@@ -63,12 +63,12 @@ if [[ ! -f "$STATE_FILE" ]]; then
 	exit 1
 fi
 
-stable_old=$(jq -r '.last_seen["linux-6.12.y"]' "$STATE_FILE")
+stable_old=$(jq -r '.last_seen["linux-6.18.y"]' "$STATE_FILE")
 master_old="${IPU4_UPSTREAM_WATCH_SINCE:-$(jq -r '.last_seen["master"]' "$STATE_FILE")}"
 processed_ids_file="$OUT/processed_ids.txt"
 jq -r '.processed_patch_ids[]?' "$STATE_FILE" > "$processed_ids_file" || true
 
-stable_new=$(git -C "$LINUX_DIR" rev-parse stable/linux-6.12.y)
+stable_new=$(git -C "$LINUX_DIR" rev-parse stable/linux-6.18.y)
 master_new=$(git -C "$LINUX_DIR" rev-parse origin/master)
 
 is_seeding=0
@@ -209,7 +209,7 @@ new_processed_ids=$(mktemp)
 jq \
 	--arg s "$stable_new" --arg m "$master_new" \
 	--rawfile ids "$new_processed_ids" \
-	'.last_seen["linux-6.12.y"] = $s
+	'.last_seen["linux-6.18.y"] = $s
 	 | .last_seen["master"] = $m
 	 | .processed_patch_ids = ($ids | split("\n") | map(select(length>0)))' \
 	"$STATE_FILE" > "$STATE_FILE.tmp"

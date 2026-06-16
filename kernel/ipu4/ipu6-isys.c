@@ -942,8 +942,9 @@ static int isys_register_devices(struct ipu6_isys *isys)
 	int ret;
 
 	isys->media_dev.dev = dev;
-	media_device_pci_init(&isys->media_dev,
-			      pdev, IPU4_MEDIA_DEV_MODEL_NAME);
+	media_device_pci_init(&isys->media_dev, pdev,
+			      is_ipu4p(isys->adev->isp->hw_ver) ?
+			      IPU4P_MEDIA_DEV_MODEL_NAME : IPU4_MEDIA_DEV_MODEL_NAME);
 
 	strscpy(isys->v4l2_dev.name, isys->media_dev.model,
 		sizeof(isys->v4l2_dev.name));

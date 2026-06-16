@@ -16,12 +16,15 @@ Whenever there is a diffference between IPU4 and IPU6, it is either handled with
 | IPU Version | PCI Device ID | Description |
 |-------------|---------------|-------------|
 | IPU4        | 0x5a88        | 4th Generation IPU |
+| IPU4P       | 0x8a19        | Ice Lake IPU4P, e.g. Surface Pro 7 |
 
-The driver currently only supports IPU4, not IPU4P.
+IPU4P support is currently an initial probe path only. The driver binds the
+PCI device, requests `ipu4p_cpd.bin`, and labels the media device as `ipu4p`,
+but the Surface camera graph, sensor routing, and capture path still need
+hardware validation and follow-up work.
 
 ## Tested kernel versions
-* 6.6.111
-* 6.12.47
+* 6.18.29
 
 ## History
 This driver has it's origin in two different drivers:
@@ -30,11 +33,11 @@ This driver has it's origin in two different drivers:
 
 IPU4 support was hacked onto the IPU6 driver to work with 6.6 by @Kleist. See https://lore.kernel.org/all/e136389011517dbc65b30f6bf0b1a9c49ab4e599.camel@gmail.com/ for more information about this work. This work was shared in https://github.com/Kleist/linux/tree/kleist-v6.6-ipu4-hacks-1 .
 
-It was recently updated to work as an out-of-tree module on 6.6 and 6.12 (and possibly working on some intermediate versions).
+This branch targets Linux 6.18 LTS / 6.18+ and 7.x only.
 
 ## Development & test harness
 
-A QEMU-based dev/test harness lives under `tools/`. It clones Linux at `v6.12` and QEMU at `v9.1.0`, seeds the driver into an in-tree path, and provides KUnit + full-VM smoke tests that run entirely in software.
+A QEMU-based dev/test harness lives under `tools/`. It clones Linux at `v6.18.29` and QEMU at `v9.1.0`, seeds the driver into an in-tree path, and provides KUnit + full-VM smoke tests that run entirely in software.
 
 * [CLAUDE.md](CLAUDE.md) — the entry point: prerequisite apt packages, build/test commands, the upstream-IPU6 discipline, and the QEMU device-model workflow. Read this first when picking up the repo.
 * [STATUS.md](STATUS.md) — milestone state, layout, and the canonical "Running the harness" recipe.
@@ -55,7 +58,7 @@ IPU4_ACCEL=tcg tools/tests/streamon-smoke.sh    # full v4l2 capture-API walk
 
 ## Upstream sync tooling
 * [tools/upstream/diff.sh](tools/upstream/diff.sh): regenerate `tools/notes/upstream-diff/summary.md`, a file-by-file divergence report against upstream `drivers/media/pci/intel/ipu6/` at the pinned tag — input for incrementally retiring `#ifdef IPU6` hunks.
-* [tools/upstream/watch.sh](tools/upstream/watch.sh): runs daily in CI (`.github/workflows/upstream-watch.yml`) — detects new upstream IPU6 commits on `linux-6.12.y` and `master`, tries cherry-picks, opens a triage PR.
+* [tools/upstream/watch.sh](tools/upstream/watch.sh): runs daily in CI (`.github/workflows/upstream-watch.yml`) — detects new upstream IPU6 commits on `linux-6.18.y` and `master`, tries cherry-picks, opens a triage PR.
 
 ## Scripts
 The scripts added will not work out of the box, but should be seen as a source of inspiration for how one could work with porting this to other devices, or e.g. add IPU4P support.

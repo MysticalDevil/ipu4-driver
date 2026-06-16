@@ -25,10 +25,12 @@ struct ipu6_bus_device;
 #define IPU6EPMTL_FIRMWARE_NAME		"intel/ipu/ipu6epmtl_fw.bin"
 #define IPU6EPADLN_FIRMWARE_NAME	"intel/ipu/ipu6epadln_fw.bin"
 
-#define IPU4_FIRMWARE_NAME               "ipu4_cpd_b0.bin"
-#define IPU4_ISYS_NUM_STREAMS            8       /* Max 8 */
+#define IPU4_FIRMWARE_NAME		"ipu4_cpd_b0.bin"
+#define IPU4P_FIRMWARE_NAME		"ipu4p_cpd.bin"
+#define IPU4_ISYS_NUM_STREAMS		8       /* Max 8 */
 
 #define PCI_DEVICE_ID_INTEL_IPU4		0x5a88
+#define PCI_DEVICE_ID_INTEL_IPU4P	0x8a19
 
 #define PCI_DEVICE_ID_INTEL_IPU6		0x9a19
 #define PCI_DEVICE_ID_INTEL_IPU6SE		0x4e19
@@ -39,8 +41,9 @@ struct ipu6_bus_device;
 
 #define IPU4_NAME			"intel-ipu4"
 #define IPU4_MEDIA_DEV_MODEL_NAME	"ipu4"
-#define IPU4_PCI_ID	0x5a88
-#define IPU4_MEDIA_DEV_MODEL_NAME	"ipu4"
+#define IPU4P_MEDIA_DEV_MODEL_NAME	"ipu4p"
+#define IPU4_PCI_ID			0x5a88
+#define IPU4P_PCI_ID			0x8a19
 
 enum ipu6_version {
 	IPU6_VER_INVALID = 0,
@@ -49,6 +52,7 @@ enum ipu6_version {
 	IPU6_VER_6EP = 5,
 	IPU6_VER_6EP_MTL = 6,
 	IPU4_VER_4 = 7,
+	IPU4_VER_4P = 8,
 };
 
 /*
@@ -79,7 +83,12 @@ static inline bool is_ipu6_tgl(u8 hw_ver)
 
 static inline bool is_ipu4(u8 hw_ver)
 {
-	return hw_ver == IPU4_VER_4;
+	return hw_ver == IPU4_VER_4 || hw_ver == IPU4_VER_4P;
+}
+
+static inline bool is_ipu4p(u8 hw_ver)
+{
+	return hw_ver == IPU4_VER_4P;
 }
 
 /*

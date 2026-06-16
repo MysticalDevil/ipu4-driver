@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-Out-of-tree Linux kernel driver for Intel IPU4, forked from the upstream IPU6 driver (`drivers/media/pci/intel/ipu6/`, upstreamed in 6.10). Tested against stable kernels 6.6.111, 6.12.47, and 7.0.1 (the latest stable as of April 2026). The driver does not work on any public hardware as-is — `ambu_ipu_bridge_*` calls must be replaced before the device probes.
+Out-of-tree Linux kernel driver for Intel IPU4, forked from the upstream IPU6 driver (`drivers/media/pci/intel/ipu6/`, upstreamed in 6.10). Tested against stable kernels 6.18.29 and 7.0.1 (the latest stable as of April 2026). The driver does not work on any public hardware as-is — `ambu_ipu_bridge_*` calls must be replaced before the device probes.
 
 There are two parallel layouts for the driver right now (see STATUS.md for the migration plan):
 
 1. **`kernel/ipu4/` — the source of truth.** Out-of-tree module with its own `Makefile`. Edit driver `.c`/`.h` here.
-2. **`tools/linux/drivers/media/pci/intel/ipu4/` — a seeded copy.** `tools/bootstrap.sh` clones upstream Linux at `v6.12` into `tools/linux/` and copies `kernel/ipu4/*.[ch]` into the in-tree path. This copy is regenerated and is *not* committed. Do not edit files under `tools/linux/` directly; edit `kernel/ipu4/` and re-bootstrap.
+2. **`tools/linux/drivers/media/pci/intel/ipu4/` — a seeded copy.** `tools/bootstrap.sh` clones upstream Linux at `v6.18.29` into `tools/linux/` and copies `kernel/ipu4/*.[ch]` into the in-tree path. This copy is regenerated and is *not* committed. Do not edit files under `tools/linux/` directly; edit `kernel/ipu4/` and re-bootstrap.
 
 ## The upstream-IPU6 discipline
 
@@ -20,7 +20,7 @@ Backports from upstream should be performed with `git cherry-pick -x` and fixing
 
 Do not restructure or "clean up" IPU6 code. Do not rename `ipu6_*` symbols. Keep diffs minimal and localized.
 
-`kernel/ipu4/ipu4-compat.h` holds `LINUX_VERSION_CODE`-gated shims for 6.6 / 6.10 / 6.11 / 6.14 / 6.18 kernel API changes. The cascade is upper-bound-open, so kernels newer than the highest shim (currently 6.18) ride on the no-shim path — 7.0.1 falls through cleanly. Add new shims here rather than `#ifdef`-ing callers.
+`kernel/ipu4/ipu4-compat.h` holds `LINUX_VERSION_CODE`-gated shims for 6.18 kernel API changes. The cascade is upper-bound-open, so kernels newer than the highest shim (currently 6.18) ride on the no-shim path — 7.0.1 falls through cleanly. Add new shims here rather than `#ifdef`-ing callers.
 
 ## Local prerequisites
 
@@ -43,7 +43,7 @@ The first list matches the `build-and-kunit` workflow; the second is the `vm-smo
 Two helpers under `tools/upstream/`, both relying on the same file mapping (`drivers/media/pci/intel/ipu6/<f>` ↔ `kernel/ipu4/<f>`, IPU4-only files in `IPU4_LOCAL_ONLY` skipped):
 
 - `tools/upstream/diff.sh` — regenerates `tools/notes/upstream-diff/{summary.md,per-file/<f>.diff}` showing the current divergence between `kernel/ipu4/` and upstream IPU6 at the pinned tag. Read this when picking the next divergence chunk to remove. Output is gitignored — re-run on demand. Honours `IPU4_LINUX_TAG` for one-off comparisons against a different upstream pin.
-- `tools/upstream/watch.sh` — driven by `.github/workflows/upstream-watch.yml` (daily 04:00 UTC). Detects new IPU6 commits on `linux-6.12.y` (stable) and Linus `master` (deduped against 6.12.y by patch-id), tries `git am` of each onto `kernel/ipu4/`, and opens a PR on `claude/upstream-watch/<date>` listing applied / conflict / n-a commits. State is kept in `tools/notes/upstream-watch-state.json` and rolls forward in the last commit on the bot branch. Run locally with `IPU4_UPSTREAM_WATCH_DRY_RUN=1` to inspect the would-be PR without pushing.
+- `tools/upstream/watch.sh` — driven by `.github/workflows/upstream-watch.yml` (daily 04:00 UTC). Detects new IPU6 commits on `linux-6.18.y` (stable) and Linus `master` (deduped against 6.18.y by patch-id), tries `git am` of each onto `kernel/ipu4/`, and opens a PR on `claude/upstream-watch/<date>` listing applied / conflict / n-a commits. State is kept in `tools/notes/upstream-watch-state.json` and rolls forward in the last commit on the bot branch. Run locally with `IPU4_UPSTREAM_WATCH_DRY_RUN=1` to inspect the would-be PR without pushing.
 
 ## Common commands
 
@@ -58,7 +58,7 @@ make -C kernel/ipu4 clean
 In-tree build via the QEMU harness (preferred for local iteration):
 
 ```bash
-tools/bootstrap.sh          # clones tools/linux/ @ v6.12 and tools/qemu/ @ v9.1.0, seeds patches + driver
+tools/bootstrap.sh          # clones tools/linux/ @ v6.18.29 and tools/qemu/ @ v9.1.0, seeds patches + driver
 tools/build.sh              # configures kconfig and builds intel-ipu4.ko in tools/linux/
 tools/tests/kunit.sh        # Tier 1: KUnit suites (ipu4_format, ipu4_bayer) under qemu-kvm via kunit.py
 ```
@@ -82,9 +82,9 @@ The bootstrap script is idempotent. Re-run after pulling to re-apply patches fro
 - `.github/workflows/build-and-kunit.yml` — reusable workflow (`workflow_call`) that owns the actual checkout → setup-harness → pytest → bootstrap → build → kunit pipeline. Inputs: `linux-url`, `linux-ref`, `display-name`.
 - `.github/workflows/bump-kernel-pins.yml` — Monday 05:30 UTC cron that resolves the latest stable point release for each kernel track and rewrites the matching `.github/kernel-pins/<key>.json` (one file per track; `ci.yml`, `vm-smoke.yml`, and `vm-smoke-weekly.yml` all glob that directory at workflow start). Opens **one PR per track** via `peter-evans/create-pull-request` when a value changed. The matrix is derived from the directory itself by a `pins` setup job, so adding a track is a one-file PR (drop a new `<key>.json` under `.github/kernel-pins/`). One file per track also means parallel bot PRs touching different tracks never conflict on each other on rebase. The script that does the actual rewrite is `tools/bump-kernel-pins.sh` (accepts `--key <track>`). Note: bot-opened PRs don't fire CI under the default `GITHUB_TOKEN`; set a `BUMP_PAT` secret to lift that, or close-and-reopen the PR by hand.
 - `.github/actions/setup-harness/action.yml` — composite action shared by every workflow. Owns the apt-package list and the optional pytest pip install (`install-pip: "true"`).
-- `.github/workflows/vm-smoke.yml` — full-VM boot + probe-smoke + streamon-smoke + mmiotrace + `compare-mmio` divergence report on every PR and on push to `main`/`master`. Pinned to the **6.12 leg only** (read from `.github/kernel-pins/`, the same source `ci.yml` uses); 6.18 and 7.0 run weekly via `vm-smoke-weekly.yml`. A thin `workflow_call` caller — the body lives in `vm-smoke-reusable.yml`.
-- `.github/workflows/vm-smoke-weekly.yml` — Sundays 07:00 UTC + `workflow_dispatch`. Matrix caller covering every non-6.12 track in `.github/kernel-pins/` (today: 6.18 + 7.0).
-- `.github/workflows/vm-smoke-reusable.yml` — reusable workflow (`workflow_call`) shared by `vm-smoke.yml` and `vm-smoke-weekly.yml`. Inputs: `linux-url`, `linux-ref`, `display-name`. The Linux build cache is namespaced by `display-name` so the 6.12 and 6.18 callers don't trample each other; the QEMU cache (independent of the kernel ref) is shared. Failure artifacts (`vm-smoke-failure-<display-name>-*`) include the serial logs; the coverage report (`mmio-trace-coverage-vm-smoke-<display-name>-*`) is published unconditionally.
+- `.github/workflows/vm-smoke.yml` — full-VM boot + probe-smoke + streamon-smoke + mmiotrace + `compare-mmio` divergence report on every PR and on push to `main`/`master`. Pinned to the **6.18 leg only** (read from `.github/kernel-pins/`, the same source `ci.yml` uses); 6.18 and 7.0 run weekly via `vm-smoke-weekly.yml`. A thin `workflow_call` caller — the body lives in `vm-smoke-reusable.yml`.
+- `.github/workflows/vm-smoke-weekly.yml` — Sundays 07:00 UTC + `workflow_dispatch`. Matrix caller covering every non-6.18 track in `.github/kernel-pins/` (today: 6.18 + 7.0).
+- `.github/workflows/vm-smoke-reusable.yml` — reusable workflow (`workflow_call`) shared by `vm-smoke.yml` and `vm-smoke-weekly.yml`. Inputs: `linux-url`, `linux-ref`, `display-name`. The Linux build cache is namespaced by `display-name` so the 6.18 and 6.18 callers don't trample each other; the QEMU cache (independent of the kernel ref) is shared. Failure artifacts (`vm-smoke-failure-<display-name>-*`) include the serial logs; the coverage report (`mmio-trace-coverage-vm-smoke-<display-name>-*`) is published unconditionally.
 - `.github/workflows/upstream-watch.yml` — daily cron that surfaces new upstream IPU6 commits as cherry-pick PRs (see "Upstream sync tooling" above).
 
 ## QEMU device-model workflow
