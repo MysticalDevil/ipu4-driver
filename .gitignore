@@ -17,6 +17,7 @@ tools/coverage/html/
 tools/coverage/summary.json
 tools/upstream/out/
 tools/notes/upstream-diff/
+logs/
 site/
 kernel/ipu4/*.o
 kernel/ipu4/*.cmd
