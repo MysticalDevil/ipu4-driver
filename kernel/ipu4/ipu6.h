@@ -104,6 +104,13 @@ static inline bool is_ipu4p(u8 hw_ver)
 /* Virtualization factor to calculate the available virtual pages */
 #define IPU6_DEVICE_GDA_VIRT_FACTOR	32
 
+enum ipu4_sensor_bridge_mode {
+	IPU4_SENSOR_BRIDGE_NONE = 0,
+	IPU4_SENSOR_BRIDGE_AMBU,
+	IPU4_SENSOR_BRIDGE_IPU,
+	IPU4_SENSOR_BRIDGE_VIRT,
+};
+
 struct ipu6_device {
 	struct pci_dev *pdev;
 	struct list_head devices;
@@ -119,6 +126,7 @@ struct ipu6_device {
 	bool need_ipc_reset;
 	bool secure_mode;
 	u8 hw_ver;
+	enum ipu4_sensor_bridge_mode sensor_bridge;
 	bool bus_ready_to_probe;
 };
 

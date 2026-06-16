@@ -20,12 +20,24 @@
 #include <linux/slab.h>
 #include <linux/types.h>
 
-#ifdef IPU6
 #include <media/ipu-bridge.h>
+
+#ifdef IPU6
 #include <media/ipu6-pci-table.h>
 #else
-#include "ambu-ipu-bridge.h"
 #include "virt-sensor.h"
+
+int ambu_ipu_bridge_init(struct device *dev);
+void ambu_ipu_bridge_uninit(struct device *dev);
+
+int __weak ambu_ipu_bridge_init(struct device *dev)
+{
+	return -ENODEV;
+}
+
+void __weak ambu_ipu_bridge_uninit(struct device *dev)
+{
+}
 #endif
 
 #include "ipu6.h"
@@ -593,47 +605,93 @@ static void ipu6_internal_pdata_init(struct ipu6_device *isp)
 #endif
 }
 
+static void ipu4_sensor_bridge_cleanup(struct pci_dev *pdev)
+{
+#ifndef IPU6
+	struct ipu6_device *isp = pci_get_drvdata(pdev);
+
+	if (!isp)
+		return;
+
+	switch (isp->sensor_bridge) {
+	case IPU4_SENSOR_BRIDGE_AMBU:
+		ambu_ipu_bridge_uninit(&pdev->dev);
+		break;
+	case IPU4_SENSOR_BRIDGE_VIRT:
+		ipu4_virt_sensor_remove(pdev);
+		break;
+	case IPU4_SENSOR_BRIDGE_IPU:
+		/* upstream ipu_bridge uses devm-managed resources */
+		break;
+	case IPU4_SENSOR_BRIDGE_NONE:
+		break;
+	}
+
+	isp->sensor_bridge = IPU4_SENSOR_BRIDGE_NONE;
+#endif
+}
+
+static int ipu4_sensor_bridge_init(struct pci_dev *pdev)
+{
+#ifndef IPU6
+	struct ipu6_device *isp = pci_get_drvdata(pdev);
+	struct fwnode_handle *fwnode = dev_fwnode(&pdev->dev);
+	struct device *dev = &pdev->dev;
+	int ret;
+
+	/* check fwnode at first, fallback into bridge if no fwnode graph */
+	ret = ipu6_isys_check_fwnode_graph(fwnode);
+	if (!ret)
+		return 0;
+
+	if (fwnode && !IS_ERR_OR_NULL(fwnode->secondary)) {
+		dev_err(dev, "fwnode graph has no endpoints connection\n");
+		return -EINVAL;
+	}
+
+#if IS_ENABLED(CONFIG_VIDEO_IPU4_VIRT_SENSOR)
+	ret = ipu4_virt_sensor_install(pdev);
+	if (!ret)
+		isp->sensor_bridge = IPU4_SENSOR_BRIDGE_VIRT;
+#else
+	if (is_ipu4p(isp->hw_ver)) {
+#if IS_ENABLED(CONFIG_IPU_BRIDGE)
+		ret = ipu_bridge_init(dev, ipu_bridge_parse_ssdb);
+		if (!ret)
+			isp->sensor_bridge = IPU4_SENSOR_BRIDGE_IPU;
+#else
+		dev_err(dev, "IPU4P requires CONFIG_IPU_BRIDGE for ACPI sensor graph setup\n");
+		ret = -ENODEV;
+#endif
+	} else {
+		ret = ambu_ipu_bridge_init(dev);
+		if (!ret)
+			isp->sensor_bridge = IPU4_SENSOR_BRIDGE_AMBU;
+	}
+#endif
+
+	if (ret && ret != -EPROBE_DEFER)
+		dev_err_probe(dev, ret, "IPU sensor bridge init failed\n");
+
+	return ret;
+#else
+	return ipu_bridge_init(&pdev->dev, ipu_bridge_parse_ssdb);
+#endif
+}
+
 static struct ipu6_bus_device *
 ipu6_isys_init(struct pci_dev *pdev, struct device *parent,
 	       const struct ipu6_buttress_ctrl *ctrl, void __iomem *base,
 	       const struct ipu6_isys_internal_pdata *ipdata)
 {
-#ifndef IPU6
-	struct fwnode_handle *fwnode = dev_fwnode(&pdev->dev);
-#endif
 	struct device *dev = &pdev->dev;
 	struct ipu6_bus_device *isys_adev;
 	struct ipu6_isys_pdata *pdata;
 	int ret;
 
-#ifdef IPU6
-	ret = ipu_bridge_init(dev, ipu_bridge_parse_ssdb);
-	if (ret) {
-		dev_err_probe(dev, ret, "IPU6 bridge init failed\n");
+	ret = ipu4_sensor_bridge_init(pdev);
+	if (ret)
 		return ERR_PTR(ret);
-	}
-#else
-	/* check fwnode at first, fallback into bridge if no fwnode graph */
-	ret = ipu6_isys_check_fwnode_graph(fwnode);
-	if (ret) {
-		if (fwnode && !IS_ERR_OR_NULL(fwnode->secondary)) {
-			dev_err(&pdev->dev,
-				"fwnode graph has no endpoints connection\n");
-			return ERR_PTR(-EINVAL);
-		}
-
-#if IS_ENABLED(CONFIG_VIDEO_IPU4_VIRT_SENSOR)
-		ret = ipu4_virt_sensor_install(pdev);
-#else
-		ret = ambu_ipu_bridge_init(dev);
-#endif
-		if (ret) {
-			if (ret != -EPROBE_DEFER)
-				dev_err_probe(dev, ret, "IPU6 bridge init failed\n");
-			return ERR_PTR(ret);
-		}
-	}
-#endif
 
 	pdata = kzalloc(sizeof(*pdata), GFP_KERNEL);
 	if (!pdata)
@@ -959,11 +1017,7 @@ static int ipu6_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 out_free_irq:
 	devm_free_irq(dev, pdev->irq, isp);
 out_ipu_bridge_uninit:
-#if IS_ENABLED(CONFIG_VIDEO_IPU4_VIRT_SENSOR)
-	ipu4_virt_sensor_remove(pdev);
-#else
-	ambu_ipu_bridge_uninit(&pdev->dev);
-#endif
+	ipu4_sensor_bridge_cleanup(pdev);
 out_ipu6_bus_del_devices:
 	if (isp->psys) {
 		ipu6_cpd_free_pkg_dir(isp->psys);
@@ -1004,11 +1058,7 @@ static void ipu6_pci_remove(struct pci_dev *pdev)
 	ipu6_mmu_cleanup(psys_mmu);
 	ipu6_mmu_cleanup(isys_mmu);
 
-#if IS_ENABLED(CONFIG_VIDEO_IPU4_VIRT_SENSOR)
-	ipu4_virt_sensor_remove(pdev);
-#else
-	ambu_ipu_bridge_uninit(&pdev->dev);
-#endif
+	ipu4_sensor_bridge_cleanup(pdev);
 }
 
 static void ipu6_pci_reset_prepare(struct pci_dev *pdev)
