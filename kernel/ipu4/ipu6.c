@@ -618,7 +618,9 @@ static void ipu4_sensor_bridge_cleanup(struct pci_dev *pdev)
 		ambu_ipu_bridge_uninit(&pdev->dev);
 		break;
 	case IPU4_SENSOR_BRIDGE_VIRT:
+#if IS_ENABLED(CONFIG_VIDEO_IPU4_VIRT_SENSOR)
 		ipu4_virt_sensor_remove(pdev);
+#endif
 		break;
 	case IPU4_SENSOR_BRIDGE_IPU:
 		/* upstream ipu_bridge uses devm-managed resources */
