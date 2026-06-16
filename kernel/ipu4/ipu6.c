@@ -961,6 +961,7 @@ static int ipu6_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 			sizeof(struct ipu6se_cpd_metadata_cmpnt);
 		isys_ipdata.csi2.nports = ARRAY_SIZE(ipu4p_csi_offsets);
 		isys_ipdata.csi2.offsets = ipu4p_csi_offsets;
+		isys_ipdata.csi2.fw_sources = ipu4p_csi_fw_sources;
 		isp->buttress.reg_irq_sts = BUTTRESS_REG_ISR_STATUS;
 		break;
 	default:

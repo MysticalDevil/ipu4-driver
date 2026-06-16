@@ -670,7 +670,8 @@ void ipu6_isys_csi2_cleanup(struct ipu6_isys_csi2 *csi2)
 
 int ipu6_isys_csi2_init(struct ipu6_isys_csi2 *csi2,
 			struct ipu6_isys *isys,
-			void __iomem *base, unsigned int index)
+			void __iomem *base, unsigned int index,
+			unsigned int fw_source)
 {
 	struct device *dev = &isys->adev->auxdev.dev;
 	int ret;
@@ -686,7 +687,7 @@ int ipu6_isys_csi2_init(struct ipu6_isys_csi2 *csi2,
 	if (ret)
 		goto fail;
 
-	csi2->asd.source = IPU6_FW_ISYS_STREAM_SRC_CSI2_PORT0 + index;
+	csi2->asd.source = IPU6_FW_ISYS_STREAM_SRC_CSI2_PORT0 + fw_source;
 	csi2->asd.supported_codes = csi2_supported_codes;
 	snprintf(csi2->asd.sd.name, sizeof(csi2->asd.sd.name),
 		 IPU6_ISYS_ENTITY_PREFIX " CSI2 %u", index);

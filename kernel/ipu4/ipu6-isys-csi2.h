@@ -71,7 +71,8 @@ struct ipu6_csi2_error {
 
 s64 ipu6_isys_csi2_get_link_freq(struct ipu6_isys_csi2 *csi2);
 int ipu6_isys_csi2_init(struct ipu6_isys_csi2 *csi2, struct ipu6_isys *isys,
-			void __iomem *base, unsigned int index);
+			void __iomem *base, unsigned int index,
+			unsigned int fw_source);
 void ipu6_isys_csi2_cleanup(struct ipu6_isys_csi2 *csi2);
 void ipu6_isys_csi2_sof_event_by_stream(struct ipu6_isys_stream *stream);
 void ipu6_isys_csi2_eof_event_by_stream(struct ipu6_isys_stream *stream);

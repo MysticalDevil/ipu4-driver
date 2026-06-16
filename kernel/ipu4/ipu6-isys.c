@@ -184,9 +184,12 @@ static int isys_csi2_register_subdevices(struct ipu6_isys *isys)
 	for (i = 0; i < csi2_pdata->nports; i++) {
 		u32 port_base = csi2_pdata->offsets ?
 				csi2_pdata->offsets[i] : CSI_REG_PORT_BASE(i);
+		u32 fw_source = csi2_pdata->fw_sources ?
+				csi2_pdata->fw_sources[i] : i;
 
 		ret = ipu6_isys_csi2_init(&isys->csi2[i], isys,
-					  isys->pdata->base + port_base, i);
+					  isys->pdata->base + port_base, i,
+					  fw_source);
 		if (ret)
 			goto fail;
 

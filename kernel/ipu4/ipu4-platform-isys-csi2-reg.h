@@ -23,6 +23,11 @@ static const unsigned int ipu4p_csi_offsets[] = {
 	0x64300, 0x6c000, 0x6c100, 0x6c200, 0x6c300
 };
 
+/* Firmware stream source IDs for the compact IPU4P receiver table above. */
+static const unsigned int ipu4p_csi_fw_sources[] = {
+	3, 6, 7, 8, 9
+};
+
 #define CSI_REG_PORT_BASE(id)		ipu4_csi_offsets[id]
 
 /* IRQ-related registers specific to each of the four CSI receivers */
