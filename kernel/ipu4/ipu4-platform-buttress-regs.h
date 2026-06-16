@@ -6,7 +6,10 @@
 
 #include <linux/bits.h>
 
-// From 4.19 ambu kernel (IPU4_ prefix added)
+/*
+ * IPU4 buttress definitions come from the 4.19 Ambu kernel tree.
+ * The IPU4_ prefix keeps them separate from the shared IPU6 names.
+ */
 #define IPU4_IS_FREQ_CTL_DIVISOR 0x4
 #define IPU4_BUTTRESS_PWR_STATE_IS_PWR_FSM_SHIFT	20
 #define IPU4_BUTTRESS_PWR_STATE_IS_PWR_FSM_MASK	(0xf << 20)
@@ -18,7 +21,12 @@
 #define IPU4_BUTTRESS_PWR_STATE_PS_PWR_FSM_IDLE	0x0
 #define IPU4_BUTTRESS_PWR_STATE_PS_PWR_FSM_PS_PWR_UP	0xf
 
-/* Ice Lake IPU4P uses a wider power FSM field and different ready states. */
+/*
+ * Ice Lake IPU4P is close to IPU4, but its buttress power FSM fields are
+ * not register-compatible with the IPU4 values above.  Keep the IPU4P ready
+ * states, masks and frequency-control bit shifts in a separate namespace so
+ * the common buttress code can select the descriptor by hardware generation.
+ */
 #define IPU4P_BUTTRESS_PWR_STATE_IS_PWR_FSM_SHIFT	20
 #define IPU4P_BUTTRESS_PWR_STATE_IS_PWR_FSM_MASK	(0x1f << 20)
 #define IPU4P_BUTTRESS_PWR_STATE_IS_PWR_FSM_IDLE	0x0
@@ -36,4 +44,4 @@
 #define IPU4_BUTTRESS_PWR_STATE_HH_STATUS_MASK		GENMASK(13, 12)
 
 
-#endif // IPU4_PLATFORM_BUTTRESS_REGS_H
+#endif /* IPU4_PLATFORM_BUTTRESS_REGS_H */

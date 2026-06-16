@@ -405,11 +405,11 @@ static const struct ipu6_buttress_ctrl ipu6_psys_buttress_ctrl = {
 	.pwr_sts_off = IPU6_BUTTRESS_PWR_STATE_DN_DONE,
 };
 
-/* Non-static: declared extern in ipu6.h so ipu4_buttress_math_kunit
- * can pin every field against the IPU4 platform constants. The struct
- * uses designated initializers, so what the kunit catches is value
- * drift in the bindings — not struct-layout reorders, which are
- * compiler no-ops.
+/*
+ * Keep IPU4 descriptors non-static: ipu4_buttress_math_kunit declares them
+ * extern and verifies every field against the IPU4 platform constants.  The
+ * structures use designated initializers, so the test catches descriptor value
+ * drift rather than compiler-only structure layout changes.
  */
 const struct ipu6_buttress_ctrl ipu4_isys_buttress_ctrl = {
 	.ratio = IPU4_IS_FREQ_CTL_DIVISOR,
@@ -431,6 +431,12 @@ const struct ipu6_buttress_ctrl ipu4_psys_buttress_ctrl = {
 	.pwr_sts_off = IPU4_BUTTRESS_PWR_STATE_PS_PWR_FSM_IDLE,
 };
 
+/*
+ * IPU4P shares most of the IPU4 driver flow, but uses different buttress
+ * power-state encodings and frequency-control bit placements.  Do not reuse
+ * the IPU4 descriptors for IPU4P: doing so makes an IPU4P ISYS power-on-ready
+ * state look like a timeout.
+ */
 static const struct ipu6_buttress_ctrl ipu4p_isys_buttress_ctrl = {
 	.ratio = IPU4_IS_FREQ_CTL_DIVISOR,
 	.ratio_shift = IPU4P_BUTTRESS_REG_IS_FREQ_CTL_RATIO_SHIFT,
@@ -459,6 +465,12 @@ struct ipu6_buttress_ctrls {
 	const struct ipu6_buttress_ctrl *isys;
 	const struct ipu6_buttress_ctrl *psys;
 };
+
+/*
+ * Select one shared ISYS/PSYS descriptor pair for the detected generation.
+ * This keeps the bus setup path common while isolating generation-specific
+ * buttress register layouts in the tables above.
+ */
 
 static const struct ipu6_buttress_ctrls ipu6_buttress_ctrls = {
 	.isys = &ipu6_isys_buttress_ctrl,
@@ -500,7 +512,7 @@ ipu6_pkg_dir_configure_spc(struct ipu6_device *isp,
 	server_fw_addr = lower_32_bits(*(pkg_dir + (pkg_dir_idx + 1) * 2));
 	/*
 	 * The stub CPD blob shipped by tools/firmware/gen-cpd.py has
-	 * zeroed pkg_dir entries — enough to satisfy
+	 * zeroed pkg_dir entries, enough to satisfy
 	 * ipu6_cpd_validate_cpd_file() but not to point at a real SPC
 	 * program. Walking the cell_program at the resulting wild
 	 * pointer would deref invalid memory. Skip the SPC-program
@@ -928,8 +940,10 @@ static int ipu6_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	case PCI_DEVICE_ID_INTEL_IPU4:
 		isp->hw_ver = IPU4_VER_4;
 		isp->cpd_fw_name = IPU4_FIRMWARE_NAME;
-		// IPU4 uses same cpd metadata cmpnt as ipu6se
-		// (smaller hash size)
+		/*
+		 * IPU4 uses the same CPD metadata component layout as IPU6SE,
+		 * including the smaller hash field.
+		 */
 		isp->cpd_metadata_cmpnt_size =
 			sizeof(struct ipu6se_cpd_metadata_cmpnt);
 		isp->buttress.reg_irq_sts = BUTTRESS_REG_ISR_ENABLED_STATUS;
@@ -937,9 +951,11 @@ static int ipu6_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	case PCI_DEVICE_ID_INTEL_IPU4P:
 		isp->hw_ver = IPU4_VER_4P;
 		isp->cpd_fw_name = IPU4P_FIRMWARE_NAME;
-		// Surface Pro 7 / Ice Lake IPU4P uses the signed IPU4P CPD blob.
-		// Keep the IPU4 CPD metadata layout until IPU4P-specific parsing
-		// differences are identified from traces or Intel legacy driver.
+		/*
+		 * Surface Pro 7 / Ice Lake IPU4P uses the signed IPU4P CPD blob.
+		 * Keep the IPU4 CPD metadata layout until IPU4P-specific parsing
+		 * differences are identified from traces or the Intel legacy driver.
+		 */
 		isp->cpd_metadata_cmpnt_size =
 			sizeof(struct ipu6se_cpd_metadata_cmpnt);
 		isp->buttress.reg_irq_sts = BUTTRESS_REG_ISR_ENABLED_STATUS;
@@ -1055,7 +1071,7 @@ static int ipu6_pci_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	dev_info(dev, "IPU%u-v%u[%x] hardware version %d\n", version, sku_id,
 		 pdev->device, isp->hw_ver);
 #else
-	// NB: Don't change, currently used as done signal in test
+	/* Do not change: this is currently used as a done signal in tests. */
 	dev_info(&pdev->dev, "IPU4 PCI driver ready\n");
 #endif
 
